@@ -1,0 +1,12 @@
+[Unit]
+Description=Restore Omarchy package signing keys after LightOS first boot
+After=lightos-setup.service
+Requires=lightos-setup.service
+ConditionPathExists=/usr/share/pacman/keyrings/omarchy.gpg
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/pacman-key --populate omarchy
+
+[Install]
+WantedBy=multi-user.target
