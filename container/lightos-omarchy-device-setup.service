@@ -1,0 +1,13 @@
+[Unit]
+Description=Prepare Omarchy user and login on the LightOS display VT
+After=lightos-setup.service seatd.service
+Requires=seatd.service
+ConditionPathExists=/usr/local/bin/lightos-setup.sh
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/lightos-omarchy-device-setup
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

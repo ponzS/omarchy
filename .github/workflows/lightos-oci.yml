@@ -21,6 +21,6 @@ jobs:
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Build image
-        run: docker build --label "org.opencontainers.image.revision=$GITHUB_SHA" -f container/Dockerfile -t ghcr.io/ponzs/omarchy:lightos-core-4.0.4 .
+        run: docker build --label "org.opencontainers.image.revision=$GITHUB_SHA" -f container/Dockerfile -t ghcr.io/ponzs/omarchy:lightos-core-4.0.4-r2 .
       - name: Publish image
-        run: docker push ghcr.io/ponzs/omarchy:lightos-core-4.0.4
+        run: docker push ghcr.io/ponzs/omarchy:lightos-core-4.0.4-r2
