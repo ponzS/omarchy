@@ -35,7 +35,7 @@ LABEL org.opencontainers.image.source="https://github.com/ponzS/omarchy" \
   org.opencontainers.image.version="4.0.4" \
   org.opencontainers.image.description="Omarchy desktop with Chrome and package installation tools for LightOS"
 
-COPY --from=package /work/pkg/omarchy-4.0.4-2-x86_64.pkg.tar.zst /tmp/omarchy.pkg.tar.zst
+COPY --from=package /work/pkg/omarchy-4.0.4-3-x86_64.pkg.tar.zst /tmp/omarchy.pkg.tar.zst
 COPY --from=chrome /work/google-chrome/google-chrome-*.pkg.tar.zst /tmp/chrome/
 COPY container/lightos-omarchy-keyring.service /etc/systemd/system/lightos-omarchy-keyring.service
 COPY container/lightos-omarchy-device-setup.service /etc/systemd/system/lightos-omarchy-device-setup.service
@@ -44,6 +44,9 @@ COPY container/lightos-omarchy-profile.sh /etc/profile.d/lightos-omarchy.sh
 COPY container/lightos-omarchy-seatd.conf /etc/systemd/system/seatd.service.d/10-lightos-vt.conf
 
 RUN set -eu; \
+  sed -i -e 's@usr/share/locale/\*@usr/share/locale/* !usr/share/locale/zh*/*@' \
+    -e 's@usr/share/X11/locale/\*@usr/share/X11/locale/* !usr/share/X11/locale/zh*/*@' \
+    -e 's@usr/share/i18n/\*@usr/share/i18n/* !usr/share/i18n/locales/zh_*@' /etc/pacman.conf; \
   printf '%s\n' 'Server = https://stable-mirror.omarchy.org/$repo/os/$arch' > /etc/pacman.d/mirrorlist; \
   pacman-key --init; \
   pacman-key --populate archlinux; \
@@ -61,6 +64,12 @@ RUN set -eu; \
     ttf-jetbrains-mono-nerd-basic foot fastfetch \
     pipewire-pulse xdg-desktop-portal-gtk; \
   pacman -U --noconfirm /tmp/chrome/*.pkg.tar.zst /tmp/omarchy.pkg.tar.zst; \
+  pacman -S --noconfirm glibc; \
+  sed -i -e '/^#en_US\.UTF-8[[:space:]]/s/^#//' \
+    -e '/^#zh_CN\.UTF-8[[:space:]]/s/^#//' /etc/locale.gen; \
+  locale-gen; \
+  locale -a | grep -Fxq zh_CN.utf8; \
+  fc-cache -f; \
   sed -i '/^\[options\]/a IgnorePkg = omarchy' /etc/pacman.conf; \
   chmod 0755 /usr/local/bin/lightos-omarchy-device-setup; \
   systemctl enable systemd-resolved.service; \
