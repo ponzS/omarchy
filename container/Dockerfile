@@ -17,6 +17,12 @@ COPY container/PKGBUILD /work/pkg/PKGBUILD
 RUN chown -R builder:builder /work \
   && su builder -s /bin/bash -c 'cd /work/pkg && OMARCHY_SRC=/work/source makepkg --nodeps --noconfirm --clean'
 
+FROM build AS seatd-guard
+
+COPY container/lightos-seatd-vt-guard.c /work/lightos-seatd-vt-guard.c
+RUN cc -shared -fPIC -O2 -Wall -Wextra -Werror \
+  -Wl,-z,relro,-z,now -o /work/lightos-seatd-vt-guard.so /work/lightos-seatd-vt-guard.c
+
 FROM build AS chrome
 
 # Review and pin the AUR recipe; makepkg verifies Google's binary checksums.
@@ -37,11 +43,6 @@ LABEL org.opencontainers.image.source="https://github.com/ponzS/omarchy" \
 
 COPY --from=package /work/pkg/omarchy-4.0.4-3-x86_64.pkg.tar.zst /tmp/omarchy.pkg.tar.zst
 COPY --from=chrome /work/google-chrome/google-chrome-*.pkg.tar.zst /tmp/chrome/
-COPY container/lightos-omarchy-keyring.service /etc/systemd/system/lightos-omarchy-keyring.service
-COPY container/lightos-omarchy-device-setup.service /etc/systemd/system/lightos-omarchy-device-setup.service
-COPY container/lightos-omarchy-device-setup.sh /usr/local/bin/lightos-omarchy-device-setup
-COPY container/lightos-omarchy-profile.sh /etc/profile.d/lightos-omarchy.sh
-COPY container/lightos-omarchy-seatd.conf /etc/systemd/system/seatd.service.d/10-lightos-vt.conf
 
 RUN set -eu; \
   sed -i -e 's@usr/share/locale/\*@usr/share/locale/* !usr/share/locale/zh*/*@' \
@@ -71,13 +72,22 @@ RUN set -eu; \
   locale -a | grep -Fxq zh_CN.utf8; \
   fc-cache -f; \
   sed -i '/^\[options\]/a IgnorePkg = omarchy' /etc/pacman.conf; \
-  chmod 0755 /usr/local/bin/lightos-omarchy-device-setup; \
   systemctl enable systemd-resolved.service; \
-  systemctl enable lightos-omarchy-keyring.service; \
-  systemctl enable seatd.service lightos-omarchy-device-setup.service; \
   install -Dm644 /usr/share/omarchy/config/chromium-flags.conf /etc/skel/.config/chrome-flags.conf; \
   rm -rf /tmp/chrome /tmp/omarchy.pkg.tar.zst /tmp/omarchy-signing-key.asc; \
   pacman -Scc --noconfirm
+
+COPY --from=seatd-guard /work/lightos-seatd-vt-guard.so /usr/local/lib/lightos-seatd-vt-guard.so
+COPY container/lightos-omarchy-keyring.service /etc/systemd/system/lightos-omarchy-keyring.service
+COPY container/lightos-omarchy-device-setup.service /etc/systemd/system/lightos-omarchy-device-setup.service
+COPY container/lightos-omarchy-device-setup.sh /usr/local/bin/lightos-omarchy-device-setup
+COPY container/lightos-omarchy-console.sh /usr/local/bin/lightos-omarchy-console
+COPY container/lightos-omarchy-console.service /etc/systemd/system/lightos-omarchy-console.service
+COPY container/lightos-omarchy-profile.sh /etc/profile.d/lightos-omarchy.sh
+COPY container/lightos-omarchy-seatd.conf /etc/systemd/system/seatd.service.d/10-lightos-vt.conf
+RUN chmod 0755 /usr/local/bin/lightos-omarchy-device-setup /usr/local/bin/lightos-omarchy-console \
+  && systemctl disable seatd.service \
+  && systemctl enable lightos-omarchy-keyring.service lightos-omarchy-device-setup.service lightos-omarchy-console.service
 
 COPY container/mimeapps.list /etc/skel/.config/mimeapps.list
 
