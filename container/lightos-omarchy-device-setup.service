@@ -1,7 +1,6 @@
 [Unit]
 Description=Prepare Omarchy user and login on the LightOS display VT
-After=lightos-setup.service seatd.service
-Requires=seatd.service
+After=lightos-setup.service
 ConditionPathExists=/usr/local/bin/lightos-setup.sh
 
 [Service]

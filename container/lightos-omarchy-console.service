@@ -1,0 +1,24 @@
+[Unit]
+Description=Omarchy desktop on the LightOS allocated display terminal
+After=lightos-omarchy-device-setup.service systemd-user-sessions.service
+Requires=lightos-omarchy-device-setup.service
+ConditionPathExists=/usr/local/bin/lightos-setup.sh
+ConditionPathExists=/dev/tty0
+ConditionPathExists=/dev/tty7
+Conflicts=seatd.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/lightos-omarchy-console
+Restart=always
+RestartSec=2
+StandardInput=tty
+TTYPath=/dev/tty0
+TTYReset=yes
+TTYVHangup=yes
+TTYVTDisallocate=no
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -32,10 +32,16 @@ if systemctl is-active --quiet "user@$uid.service"; then
   systemctl restart --no-block "user@$uid.service"
 fi
 
-# LightOS maps /dev/tty0 to this instance's allocated host VT.
-if [ -c /dev/tty0 ] && [ "$(stat -c '%t' /dev/tty0)" = 4 ]; then
+# The console service owns automatic login on the mapped VT. Do not start a
+# competing getty, allocate another terminal, or activate a VT from the image.
+if [ -c /dev/tty0 ] && [ -c /dev/tty7 ] &&
+   [ "$(stat -c '%t' /dev/tty0)" = 4 ] &&
+   [ "$(stat -c '%t:%T' /dev/tty0)" = "$(stat -c '%t:%T' /dev/tty7)" ]; then
   tty_number=$(printf '%d' "0x$(stat -c '%T' /dev/tty0)")
   if [ "$tty_number" -ge 7 ] && [ "$tty_number" -le 63 ]; then
-    systemctl start "getty@tty$tty_number.service"
+    mkdir -p /run/systemd/system/lightos-omarchy-console.service.d
+    printf '[Service]\nTTYPath=/dev/tty%s\n' "$tty_number" > \
+      /run/systemd/system/lightos-omarchy-console.service.d/10-allocated-vt.conf
+    systemctl daemon-reload
   fi
 fi
