@@ -3,6 +3,8 @@
 # omarchy:summary=Show a fuzzy-finder TUI for picking new AUR packages to install.
 # omarchy:requires-sudo=true
 
+set -e -o pipefail
+
 fzf_args=(
   --multi
   --preview 'yay -Siia {1}'

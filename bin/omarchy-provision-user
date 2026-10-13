@@ -116,7 +116,9 @@ done
 source "$OMARCHY_INSTALL/user/all.sh"
 
 omarchy-refresh-applications
-env -u BROWSER xdg-settings set default-web-browser chromium.desktop
+if [[ -z $(env -u BROWSER xdg-settings get default-web-browser) ]]; then
+  env -u BROWSER xdg-settings set default-web-browser chromium.desktop
+fi
 xdg-mime default HEY.desktop x-scheme-handler/mailto
 
 if (( first_install )); then
