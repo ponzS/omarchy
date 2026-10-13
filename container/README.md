@@ -2,9 +2,9 @@
 
 This directory builds an x86_64 OCI image from the Omarchy 4.0.4 source in this fork. It includes Hyprland, Quickshell, SDDM, the base programs LightOS needs to start a systemd container, working package installation tools, and common desktop applications. The upstream kernel, bootloader and disk snapshot dependencies are omitted because the host supplies the kernel and LightOS supplies the container rootfs.
 
-The [workflow](../.github/workflows/lightos-oci.yml) publishes `ghcr.io/ponzs/omarchy:lightos-core-4.0.4-r4` and updates `ghcr.io/ponzs/omarchy:lightos-core-4.0.4`, the stable tag used by LightOS. It packages the checked-out commit and records that revision in the image label. Keep the GHCR package public so LightOS can pull it without registry credentials. Existing instances retain their rootfs and are not automatically upgraded when a tag changes.
+The [workflow](../.github/workflows/lightos-oci.yml) publishes `ghcr.io/ponzs/omarchy:lightos-core-4.0.4-r5` and updates `ghcr.io/ponzs/omarchy:lightos-core-4.0.4`. The corresponding LightOS release uses the r5 tag to avoid stale cached bases. It packages the checked-out commit and records that revision in the image label. Keep the GHCR package public so LightOS can pull it without registry credentials. Existing instances retain their rootfs and are not automatically upgraded when a tag changes.
 
-In LightOS, choose the **Omarchy 4.0.4** preset and GHCR, or choose **Custom Image** and enter the revision tag above. Create the instance with a non-root username and password. On first boot, LightOS creates the requested user from Omarchy's `/etc/skel` and applies its normal instance setup. When display takeover is enabled, the image starts a password-protected login on the VT allocated by LightOS. Logging in there starts the Omarchy desktop. Remote desktop installation and activation remain manual LightOS actions.
+In LightOS, choose the **Omarchy 4.0.4** preset and GHCR, or choose **Custom Image** and enter the revision tag above. Create the instance with a non-root username and password. On first boot, LightOS creates the requested user from Omarchy's `/etc/skel` and applies its normal instance setup. When display takeover is enabled, selecting the allocated VT through the host's VT Manager automatically starts that user's desktop without another console login. Remote desktop installation and activation remain manual LightOS actions.
 
 ## Included software
 
@@ -25,8 +25,8 @@ The same build can be performed locally when a GitHub-hosted runner is unavailab
 ```bash
 docker build --platform linux/amd64 --provenance=false \
   --label "org.opencontainers.image.revision=$(git rev-parse HEAD)" \
-  -f container/Dockerfile -t ghcr.io/ponzs/omarchy:lightos-core-4.0.4-r4 .
-docker push ghcr.io/ponzs/omarchy:lightos-core-4.0.4-r4
+  -f container/Dockerfile -t ghcr.io/ponzs/omarchy:lightos-core-4.0.4-r5 .
+docker push ghcr.io/ponzs/omarchy:lightos-core-4.0.4-r5
 ```
 
 After verifying the image, tag and push the same image as `ghcr.io/ponzs/omarchy:lightos-core-4.0.4`. Synchronize it to LightOS's existing Docker Hub distribution tag `docker.io/ponzs/omarchy:lightos-core-4.0.4` and compare manifest, configuration, and layer digests across the two registries.
