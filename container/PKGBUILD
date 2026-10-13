@@ -1,9 +1,9 @@
 # Container variant of omacom/omarchy-pkgs/pkgbuilds/omarchy/PKGBUILD.
-# It retains the Omarchy 4.0.4 runtime dependencies and omits the
+# It includes desktop and package installation dependencies and omits the
 # machine bootloader/snapshot dependencies, which require an EFI system partition.
 pkgname=omarchy
 pkgver=4.0.4
-pkgrel=1
+pkgrel=2
 pkgdesc='Omarchy desktop adapted for a container rootfs'
 arch=('x86_64')
 url='https://github.com/ponzS/omarchy'
@@ -26,6 +26,33 @@ depends=(
   'fakeroot'
   'pacman-contrib'
   'ttf-jetbrains-mono-nerd-basic'
+  'base-devel'
+  'fzf'
+  'yay'
+  'xdg-terminal-exec'
+  'plocate'
+  'google-chrome'
+  'foot'
+  'nautilus'
+  'neovim'
+  'imv'
+  'mpv'
+  'btop'
+  'dua-cli'
+  'wl-clipboard'
+  'grim'
+  'slurp'
+  'wtype'
+  'imagemagick'
+  'inotify-tools'
+  'unzip'
+  'less'
+  'man-db'
+  'ripgrep'
+  'fd'
+  'eza'
+  'bat'
+  'mise-bin'
 )
 source=()
 sha256sums=()
@@ -60,5 +87,5 @@ package() {
       touch "$pkgdir/etc/skel/.local/state/omarchy/migrations/$(basename "$migration")"
     done
   fi
-  install -Dm644 version "$pkgdir/usr/share/omarchy/version"
+  printf '%s\n' "$pkgver" >"$pkgdir/usr/share/omarchy/version"
 }

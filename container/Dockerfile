@@ -1,8 +1,11 @@
-FROM docker.io/library/archlinux:base AS package
+FROM docker.io/library/archlinux:base AS build
 
 RUN pacman -Syu --noconfirm --needed base-devel git \
   && useradd -m builder \
   && mkdir -p /work/source /work/pkg
+
+FROM build AS package
+
 COPY bin/ /work/source/bin/
 COPY default/libalpm/hooks/ /work/source/default/libalpm/hooks/
 COPY install/ /work/source/install/
@@ -14,14 +17,26 @@ COPY container/PKGBUILD /work/pkg/PKGBUILD
 RUN chown -R builder:builder /work \
   && su builder -s /bin/bash -c 'cd /work/pkg && OMARCHY_SRC=/work/source makepkg --nodeps --noconfirm --clean'
 
+FROM build AS chrome
+
+# Review and pin the AUR recipe; makepkg verifies Google's binary checksums.
+ARG GOOGLE_CHROME_AUR_COMMIT=22f911574697bc9a89160773f0f6c7828ab3d06d
+RUN git init /work/google-chrome \
+  && git -C /work/google-chrome remote add origin https://aur.archlinux.org/google-chrome.git \
+  && git -C /work/google-chrome fetch --depth=1 origin "$GOOGLE_CHROME_AUR_COMMIT" \
+  && git -C /work/google-chrome checkout --detach FETCH_HEAD \
+  && chown -R builder:builder /work/google-chrome \
+  && su builder -s /bin/bash -c 'cd /work/google-chrome && makepkg --nodeps --noconfirm --clean'
+
 FROM docker.io/library/archlinux:base
 
 LABEL org.opencontainers.image.source="https://github.com/ponzS/omarchy" \
   org.opencontainers.image.title="Omarchy for LightOS" \
   org.opencontainers.image.version="4.0.4" \
-  org.opencontainers.image.description="Omarchy core desktop in an Arch Linux container rootfs"
+  org.opencontainers.image.description="Omarchy desktop with Chrome and package installation tools for LightOS"
 
-COPY --from=package /work/pkg/omarchy-4.0.4-1-x86_64.pkg.tar.zst /tmp/omarchy.pkg.tar.zst
+COPY --from=package /work/pkg/omarchy-4.0.4-2-x86_64.pkg.tar.zst /tmp/omarchy.pkg.tar.zst
+COPY --from=chrome /work/google-chrome/google-chrome-*.pkg.tar.zst /tmp/chrome/
 COPY container/lightos-omarchy-keyring.service /etc/systemd/system/lightos-omarchy-keyring.service
 COPY container/lightos-omarchy-device-setup.service /etc/systemd/system/lightos-omarchy-device-setup.service
 COPY container/lightos-omarchy-device-setup.sh /usr/local/bin/lightos-omarchy-device-setup
@@ -45,13 +60,16 @@ RUN set -eu; \
     wireplumber pipewire gnome-keyring gum jq git perl fakeroot pacman-contrib \
     ttf-jetbrains-mono-nerd-basic foot fastfetch \
     pipewire-pulse xdg-desktop-portal-gtk; \
-  pacman -U --noconfirm /tmp/omarchy.pkg.tar.zst; \
+  pacman -U --noconfirm /tmp/chrome/*.pkg.tar.zst /tmp/omarchy.pkg.tar.zst; \
   sed -i '/^\[options\]/a IgnorePkg = omarchy' /etc/pacman.conf; \
   chmod 0755 /usr/local/bin/lightos-omarchy-device-setup; \
   systemctl enable systemd-resolved.service; \
   systemctl enable lightos-omarchy-keyring.service; \
   systemctl enable seatd.service lightos-omarchy-device-setup.service; \
-  rm -f /tmp/omarchy.pkg.tar.zst /tmp/omarchy-signing-key.asc; \
+  install -Dm644 /usr/share/omarchy/config/chromium-flags.conf /etc/skel/.config/chrome-flags.conf; \
+  rm -rf /tmp/chrome /tmp/omarchy.pkg.tar.zst /tmp/omarchy-signing-key.asc; \
   pacman -Scc --noconfirm
+
+COPY container/mimeapps.list /etc/skel/.config/mimeapps.list
 
 CMD ["/sbin/init"]
