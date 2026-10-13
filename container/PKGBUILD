@@ -3,7 +3,7 @@
 # machine bootloader/snapshot dependencies, which require an EFI system partition.
 pkgname=omarchy
 pkgver=4.0.4
-pkgrel=2
+pkgrel=3
 pkgdesc='Omarchy desktop adapted for a container rootfs'
 arch=('x86_64')
 url='https://github.com/ponzS/omarchy'
@@ -26,6 +26,9 @@ depends=(
   'fakeroot'
   'pacman-contrib'
   'ttf-jetbrains-mono-nerd-basic'
+  'noto-fonts'
+  'noto-fonts-cjk'
+  'noto-fonts-emoji'
   'base-devel'
   'fzf'
   'yay'
