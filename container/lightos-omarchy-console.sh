@@ -30,6 +30,18 @@ for (( attempt = 0; attempt < 100; attempt++ )); do
 done
 [[ -S /run/seatd.sock ]]
 
-# Automatic login is limited to the allocated physical terminal. Retain the
-# controlling session for seatd while PAM sets up the ordinary instance user.
-su --login --shell /bin/bash --session-command 'exec /bin/bash -il' "$user"
+# Arch's su-l PAM stack does not create a logind session. runuser-l includes
+# system-login, so UWSM receives a real local session on our allocated VT.
+# Keep the controlling session shared with seatd for VT release/acquire.
+XDG_SESSION_CLASS=user XDG_SESSION_TYPE=tty XDG_SEAT=seat0 XDG_VTNR="$vt" \
+  runuser --login --shell /bin/bash \
+  --whitelist-environment=XDG_SESSION_CLASS,XDG_SESSION_TYPE,XDG_SEAT,XDG_VTNR \
+  --session-command '
+    set -eu
+    test -n "${XDG_SESSION_ID:-}"
+    test "$(loginctl show-session "$XDG_SESSION_ID" -p VTNr --value)" = "$XDG_VTNR"
+    export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+    export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"
+    test -S "$XDG_RUNTIME_DIR/bus"
+    exec /bin/bash -il
+  ' "$user"

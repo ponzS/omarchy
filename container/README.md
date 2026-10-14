@@ -2,7 +2,7 @@
 
 This directory builds an x86_64 OCI image from the Omarchy 4.0.4 source in this fork. It includes Hyprland, Quickshell, SDDM, the base programs LightOS needs to start a systemd container, working package installation tools, and common desktop applications. The upstream kernel, bootloader and disk snapshot dependencies are omitted because the host supplies the kernel and LightOS supplies the container rootfs.
 
-The [workflow](../.github/workflows/lightos-oci.yml) publishes `ghcr.io/ponzs/omarchy:lightos-core-4.0.4-r5` and updates `ghcr.io/ponzs/omarchy:lightos-core-4.0.4`. The corresponding LightOS release uses the r5 tag to avoid stale cached bases. It packages the checked-out commit and records that revision in the image label. Keep the GHCR package public so LightOS can pull it without registry credentials. Existing instances retain their rootfs and are not automatically upgraded when a tag changes.
+The [workflow](../.github/workflows/lightos-oci.yml) publishes `ghcr.io/ponzs/omarchy:lightos-core-4.0.4-r6` and updates `ghcr.io/ponzs/omarchy:lightos-core-4.0.4`. The corresponding LightOS release uses the r6 tag to avoid stale cached bases. It packages the checked-out commit and records that revision in the image label. Keep the GHCR package public so LightOS can pull it without registry credentials. Existing instances retain their rootfs and are not automatically upgraded when a tag changes.
 
 In LightOS, choose the **Omarchy 4.0.4** preset and GHCR, or choose **Custom Image** and enter the revision tag above. Create the instance with a non-root username and password. On first boot, LightOS creates the requested user from Omarchy's `/etc/skel` and applies its normal instance setup. When display takeover is enabled, selecting the allocated VT through the host's VT Manager automatically starts that user's desktop without another console login. Remote desktop installation and activation remain manual LightOS actions.
 
@@ -25,8 +25,8 @@ The same build can be performed locally when a GitHub-hosted runner is unavailab
 ```bash
 docker build --platform linux/amd64 --provenance=false \
   --label "org.opencontainers.image.revision=$(git rev-parse HEAD)" \
-  -f container/Dockerfile -t ghcr.io/ponzs/omarchy:lightos-core-4.0.4-r5 .
-docker push ghcr.io/ponzs/omarchy:lightos-core-4.0.4-r5
+  -f container/Dockerfile -t ghcr.io/ponzs/omarchy:lightos-core-4.0.4-r6 .
+docker push ghcr.io/ponzs/omarchy:lightos-core-4.0.4-r6
 ```
 
 After verifying the image, tag and push the same image as `ghcr.io/ponzs/omarchy:lightos-core-4.0.4`. Synchronize it to LightOS's existing Docker Hub distribution tag `docker.io/ponzs/omarchy:lightos-core-4.0.4` and compare manifest, configuration, and layer digests across the two registries.
@@ -51,5 +51,7 @@ The confirmed requirements and acceptance scenarios are in [spec/desktop/softwar
 LightOS resets the Arch pacman keyring on first boot. This image enables a service that restores the Omarchy signing key after that setup finishes.
 
 The desktop setup service grants the instance user access to the mapped GPU. The console service waits for VT Manager to activate the mapped terminal, then automatically logs in the ordinary instance user and starts the desktop. It starts seatd in that controlling-terminal session with VT release/acquire handling enabled; a detached seatd cannot register those signals without `CAP_SYS_TTY_CONFIG`, which LightOS deliberately removes. Its preload guard permits terminal mode changes only on the VT mapped by LightOS at `/dev/tty0` and `/dev/tty7`, refuses a new client while another VT is active, and rejects VT allocation, activation, and switch locking. VT Manager retains ownership of switching. Switching away must release DRM master and input devices; switching back must restore the same physical desktop without another login. Validate both directions alongside a connected remote desktop before accepting a release.
+
+Physical automatic login uses Arch's `runuser-l` PAM stack to establish the ordinary user's logind session on the real allocated terminal. It sets the address of that user's existing D-Bus bus before starting UWSM. Arch's `su-l` stack does not establish this session and cannot supply the required login environment.
 
 This image does not include the entire ISO application collection and does not run the ISO's disk installer, bootloader setup, or hardware configuration. Image build checks do not replace verification of physical display and remote desktop behavior on the target LightOS device.
