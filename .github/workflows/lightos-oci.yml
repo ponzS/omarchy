@@ -29,9 +29,9 @@ jobs:
           docker build --platform linux/amd64
           --label "org.opencontainers.image.revision=$GITHUB_SHA"
           -f container/Dockerfile
-          -t ghcr.io/ponzs/omarchy:lightos-core-4.0.4-r5
+          -t ghcr.io/ponzs/omarchy:lightos-core-4.0.4-r6
           -t ghcr.io/ponzs/omarchy:lightos-core-4.0.4 .
       - name: Publish image
         run: |
-          docker push ghcr.io/ponzs/omarchy:lightos-core-4.0.4-r5
+          docker push ghcr.io/ponzs/omarchy:lightos-core-4.0.4-r6
           docker push ghcr.io/ponzs/omarchy:lightos-core-4.0.4
