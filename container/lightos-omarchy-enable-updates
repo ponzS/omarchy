@@ -1,0 +1,74 @@
+#!/bin/bash
+# Enable the official Omarchy update path on an existing or image-build rootfs.
+# Package operations are deliberately left to the caller / omarchy update.
+set -euo pipefail
+
+(( EUID == 0 )) || { echo 'Run as root.' >&2; exit 1; }
+root=${1:-/}
+root=${root%/}
+[[ -d $root/etc && -f $root/etc/pacman.conf ]] || exit 1
+if [[ -z $root ]] && ! systemd-detect-virt --container --quiet; then
+  echo 'Refusing to apply the container policy to a non-container system.' >&2
+  exit 1
+fi
+source_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+policy="$source_dir/pacman-container.conf"
+[[ -f $policy ]] || policy=/usr/share/lightos-omarchy/pacman-container.conf
+[[ -f $policy ]] || policy="$root/etc/pacman.d/lightos-omarchy.conf"
+[[ -f $policy ]] || exit 1
+if [[ $policy != "$root/etc/pacman.d/lightos-omarchy.conf" ]]; then
+  install -Dm644 "$policy" "$root/etc/pacman.d/lightos-omarchy.conf"
+fi
+
+# Modify only the old container pin and our own Include. Preserve all other
+# ignore rules, repositories, locale extraction rules and administrator edits.
+python - "$root/etc/pacman.conf" <<'PY'
+from pathlib import Path
+import re
+import sys
+p = Path(sys.argv[1])
+lines = p.read_text().splitlines(keepends=True)
+out = []
+inserted = False
+for line in lines:
+    if re.match(r'^\s*Include\s*=\s*/etc/pacman.d/lightos-omarchy.conf\s*$', line):
+        continue
+    match = re.match(r'^(\s*IgnorePkg\s*=\s*)([^#]*)(.*)$', line.rstrip('\n'))
+    if match:
+        packages = match[2].split()
+        packages = [x for x in packages if x not in ('omarchy', 'omarchy-settings')]
+        if packages:
+            out.append(match[1] + ' '.join(packages) + match[3] + '\n')
+        continue
+    out.append(line)
+    if not inserted and re.match(r'^\s*\[options\]\s*$', line):
+        out.append('Include = /etc/pacman.d/lightos-omarchy.conf\n')
+        inserted = True
+if not inserted:
+    raise SystemExit('No [options] section in pacman.conf')
+p.write_text(''.join(out))
+PY
+
+# A previously installed boot tool is not removed by adding NoExtract alone.
+# Remove only package-owned excluded files, never user data or boot content.
+python - "$root" <<'PY'
+from pathlib import Path
+import fnmatch
+import sys
+root = Path(sys.argv[1] or '/')
+policy = root / 'etc/pacman.d/lightos-omarchy.conf'
+patterns = []
+for line in policy.read_text().splitlines():
+    if line.startswith('NoExtract = '):
+        patterns.extend(line.split('=', 1)[1].split())
+for record in (root / 'var/lib/pacman/local').glob('*/files'):
+    for path in record.read_text().splitlines():
+        if path.endswith('/') or not any(fnmatch.fnmatchcase(path, pat) for pat in patterns):
+            continue
+        target = root / path
+        if target.is_file() or target.is_symlink():
+            target.unlink()
+            print('Excluded container boot entrypoint:', path)
+PY
+
+echo 'Official Omarchy upgrades enabled; kernel and boot operations stay with LightOS.'

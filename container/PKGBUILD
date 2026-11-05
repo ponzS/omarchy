@@ -1,94 +1,22 @@
-# Container variant of omacom/omarchy-pkgs/pkgbuilds/omarchy/PKGBUILD.
-# It includes desktop and package installation dependencies and omits the
-# machine bootloader/snapshot dependencies, which require an EFI system partition.
-pkgname=omarchy
-pkgver=4.0.4
-pkgrel=3
-pkgdesc='Omarchy desktop adapted for a container rootfs'
+# The desktop itself always comes from the official Omarchy repository.
+# This package owns only the container policy. Desktop applications are image
+# defaults, not hard dependencies: upstream migrations may replace them.
+pkgname=lightos-omarchy-container
+pkgver=1.0.0
+pkgrel=2
+pkgdesc='LightOS container integration for official Omarchy updates'
 arch=('x86_64')
 url='https://github.com/ponzS/omarchy'
 license=('MIT')
-depends=(
-  'omarchy-keyring'
-  "omarchy-settings=${pkgver}"
-  'hyprland'
-  'quickshell'
-  'uwsm'
-  'sddm'
-  'xdg-desktop-portal-hyprland'
-  'wireplumber'
-  'pipewire'
-  'gnome-keyring'
-  'gum'
-  'jq'
-  'git'
-  'perl'
-  'fakeroot'
-  'pacman-contrib'
-  'ttf-jetbrains-mono-nerd-basic'
-  'noto-fonts'
-  'noto-fonts-cjk'
-  'noto-fonts-emoji'
-  'base-devel'
-  'fzf'
-  'yay'
-  'xdg-terminal-exec'
-  'plocate'
-  'google-chrome'
-  'foot'
-  'nautilus'
-  'neovim'
-  'imv'
-  'mpv'
-  'btop'
-  'dua-cli'
-  'wl-clipboard'
-  'grim'
-  'slurp'
-  'wtype'
-  'imagemagick'
-  'inotify-tools'
-  'unzip'
-  'less'
-  'man-db'
-  'ripgrep'
-  'fd'
-  'eza'
-  'bat'
-  'mise-bin'
-)
-source=()
-sha256sums=()
-
-prepare() {
-  [[ -n ${OMARCHY_SRC:-} ]] || return 1
-  mkdir -p "$srcdir/omarchy"
-  cp -a "$OMARCHY_SRC/." "$srcdir/omarchy/"
-}
+depends=('omarchy' 'python' 'systemd' 'seatd')
+install=lightos-omarchy-container.install
+source=('pacman-container.conf' 'lightos-omarchy-enable-updates')
+sha256sums=('SKIP' 'SKIP')
+options=(!debug)
 
 package() {
-  cd "$srcdir/omarchy"
-  install -d "$pkgdir/usr/bin" "$pkgdir/usr/share/omarchy/bin"
-  for bin in bin/*; do
-    [[ -f $bin ]] || continue
-    local base
-    base=$(basename "$bin")
-    case "$base" in
-      omarchy-debug|omarchy-debug-idle|omarchy-upload-log) continue ;;
-    esac
-    install -Dm755 "$bin" "$pkgdir/usr/bin/$base"
-    ln -s "/usr/bin/$base" "$pkgdir/usr/share/omarchy/bin/$base"
-  done
-  install -d "$pkgdir/usr/share/omarchy"
-  install -Dm644 default/libalpm/hooks/00-omarchy-update-guard.hook "$pkgdir/usr/share/libalpm/hooks/00-omarchy-update-guard.hook"
-  install -Dm644 default/libalpm/hooks/10-omarchy-hyprland-reload-pause.hook "$pkgdir/usr/share/libalpm/hooks/10-omarchy-hyprland-reload-pause.hook"
-  install -Dm644 default/libalpm/hooks/90-omarchy-hyprland-reload-resume.hook "$pkgdir/usr/share/libalpm/hooks/90-omarchy-hyprland-reload-resume.hook"
-  cp -a install themes migrations shell "$pkgdir/usr/share/omarchy/"
-  if compgen -G 'migrations/*.sh' >/dev/null; then
-    install -d "$pkgdir/etc/skel/.local/state/omarchy/migrations"
-    for migration in migrations/*.sh; do
-      touch "$pkgdir/etc/skel/.local/state/omarchy/migrations/$(basename "$migration")"
-    done
-  fi
-  printf '%s\n' "$pkgver" >"$pkgdir/usr/share/omarchy/version"
+  install -Dm644 "$srcdir/pacman-container.conf" \
+    "$pkgdir/usr/share/lightos-omarchy/pacman-container.conf"
+  install -Dm755 "$srcdir/lightos-omarchy-enable-updates" \
+    "$pkgdir/usr/bin/lightos-omarchy-enable-updates"
 }

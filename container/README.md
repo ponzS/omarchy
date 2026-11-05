@@ -1,57 +1,41 @@
-# Omarchy desktop image for LightOS
+# Official Omarchy desktop image for LightOS
 
-This directory builds an x86_64 OCI image from the Omarchy 4.0.4 source in this fork. It includes Hyprland, Quickshell, SDDM, the base programs LightOS needs to start a systemd container, working package installation tools, and common desktop applications. The upstream kernel, bootloader and disk snapshot dependencies are omitted because the host supplies the kernel and LightOS supplies the container rootfs.
+This image installs `omarchy` and `omarchy-settings` directly from the official stable repository. The independent `lightos-omarchy-container` package contains only the LightOS update policy. `desktop.packages` lists image defaults without preventing upstream migrations from replacing applications. There is no exact Omarchy version pin and no custom package replacing the official desktop.
 
-The [workflow](../.github/workflows/lightos-oci.yml) publishes `ghcr.io/ponzs/omarchy:lightos-core-4.0.4-r6` and updates `ghcr.io/ponzs/omarchy:lightos-core-4.0.4`. The corresponding LightOS release uses the r6 tag to avoid stale cached bases. It packages the checked-out commit and records that revision in the image label. Keep the GHCR package public so LightOS can pull it without registry credentials. Existing instances retain their rootfs and are not automatically upgraded when a tag changes.
+## Updating an instance
 
-In LightOS, choose the **Omarchy 4.0.4** preset and GHCR, or choose **Custom Image** and enter the revision tag above. Create the instance with a non-root username and password. On first boot, LightOS creates the requested user from Omarchy's `/etc/skel` and applies its normal instance setup. When display takeover is enabled, selecting the allocated VT through the host's VT Manager automatically starts that user's desktop without another console login. Remote desktop installation and activation remain manual LightOS actions.
+Use the official **Update > Omarchy** menu or:
 
-## Included software
+```bash
+omarchy update
+```
 
-The container package's `depends` in [PKGBUILD](PKGBUILD) is the runtime dependency list. Installation tools include `xdg-terminal-exec`, `fzf`, `yay`, `base-devel`, and `plocate`. Both menu installation and terminal installation are available; AUR packages build as the ordinary user before privileged installation.
+Updates keep the existing rootfs and personal files. LightOS owns the kernel, bootloader and rootfs lifecycle; the container must not deploy an EFI bootloader or rebuild the host kernel. `pacman-container.conf` uses pacman's supported `NoExtract` policy to omit the official dependencies' boot entrypoints, boot hooks, snapshot entrypoints and autostart helpers. The genuine dependencies remain installed: no fake `provides`, disabled signature checks, success stubs or rewritten official scripts are used. Omarchy's existing command-presence guards skip the inapplicable boot migrations.
 
-Preinstalled applications include Google Chrome, Foot, Nautilus, Neovim, imv, mpv, btop, and dua. Clipboard, screenshot, search, archive, and common shell tools are included as well. Chrome is the default browser for new users and opens the supplied web application shortcuts. User finalization preserves an existing browser choice.
+The policy is `/etc/pacman.d/lightos-omarchy.conf`, included from pacman's `[options]`. Other repositories, package ignores, and locale settings are preserved. Kernel/snapshot commands omitted by the policy are intentionally unavailable in a container. Do not run Omarchy's disk installer, factory reset, bootloader setup or whole-machine restore here.
 
-Noto, Noto CJK and Noto Color Emoji fonts are preinstalled so Chinese text renders in desktop applications and terminals. Both `en_US.UTF-8` and `zh_CN.UTF-8` locales are generated; the existing `C.UTF-8` default is retained. The Arch image's `NoExtract` rules allow Chinese translations and locale definitions, including for future package installations. Chinese text rendering does not require changing the interface language. Input methods are configured separately.
+## Migrating an existing 4.0.4 instance
 
-Chrome is built as a normal pacman package by an unprivileged build-stage user from a pinned [AUR recipe](https://aur.archlinux.org/cgit/aur.git/tree/PKGBUILD?h=google-chrome&id=22f911574697bc9a89160773f0f6c7828ab3d06d). `makepkg` verifies the recipe's checksums for the binary downloaded from Google. Change `GOOGLE_CHROME_AUR_COMMIT` in the Dockerfile when reviewing a Chrome update. Chrome's sandbox remains enabled.
+Build the small integration package, enable its extraction policy before upgrading, install its dependencies, and replace the old desktop package through a complete official update. `lightos-omarchy-enable-updates` removes only the old `omarchy`/`omarchy-settings` ignore entries and any package-owned files covered by the policy. It does not delete personal data, rewrite the desktop source, or change LightOS VT services.
 
-The Omarchy package is pinned in pacman to retain the container dependency set; update this directory when publishing a later Omarchy release. The package release is `4.0.4-3`, and the packaged Omarchy version file reports `4.0.4`.
+Existing installations should complete `omarchy update` so all applicable per-user migrations run. New users receive current migration markers from the official packages, so the image explicitly installs current desktop runtime additions such as OWE, titlebars and input methods.
 
 ## Build and publish
 
-The same build can be performed locally when a GitHub-hosted runner is unavailable:
-
 ```bash
-docker build --platform linux/amd64 --provenance=false \
+docker build --platform linux/amd64 \
   --label "org.opencontainers.image.revision=$(git rev-parse HEAD)" \
-  -f container/Dockerfile -t ghcr.io/ponzs/omarchy:lightos-core-4.0.4-r6 .
-docker push ghcr.io/ponzs/omarchy:lightos-core-4.0.4-r6
+  -f container/Dockerfile -t ghcr.io/ponzs/omarchy:lightos-stable .
 ```
 
-After verifying the image, tag and push the same image as `ghcr.io/ponzs/omarchy:lightos-core-4.0.4`. Synchronize it to LightOS's existing Docker Hub distribution tag `docker.io/ponzs/omarchy:lightos-core-4.0.4` and compare manifest, configuration, and layer digests across the two registries.
+The workflow publishes `lightos-stable-<commit>` plus the mutable `lightos-stable` tag. Use the immutable tag for LightOS presets to avoid stale image caches. Publishing a tag does not replace existing instances. Synchronize verified releases to the Docker Hub / Aliyun mirrors used by the LightOS preset before changing those references.
 
-## Repair an existing instance
+## Container desktop integration
 
-Registry updates do not change an existing rootfs. Install the missing fonts and restart affected applications:
+The existing keyring restoration, GPU group setup, ordinary-user automatic login, allocated-VT console service and seatd VT guard remain independent files in `/etc/systemd/system/` and `/usr/local/`. Official package upgrades do not replace them. The host VT Manager still owns terminal allocation and switching, and the container receives no new global VT capability.
 
-```bash
-omarchy-pkg-add noto-fonts noto-fonts-cjk noto-fonts-emoji
-fc-cache -f
-```
+Chrome is installed as a signed package from the configured official Omarchy repository. Chinese fonts and UTF-8 locales remain available. Physical and remote desktop must be tested separately: a successful package transaction does not prove VT release/acquire or remote streaming works.
 
-## Manual validation
+## Validation
 
-Use the newly built image to create an instance and enable its remote desktop through LightOS. Open Chrome, a supplied web application shortcut, Files, Foot, Neovim, imv, mpv, and btop. Verify that the default browser remains Chrome after first-login setup. Check that Chinese text renders as readable characters in the browser and terminal; package and locale checks alone are not desktop acceptance.
-
-Open **Install > Package**, choose a small package that is not installed, authorize the install, and run the installed program. Repeat from the terminal. Open **Install > AUR**, choose a small available AUR package, and verify real source download, user-owned compilation, installation, and execution. Canceling a picker must leave without reporting a completed installation; an installation error must return failure.
-
-The confirmed requirements and acceptance scenarios are in [spec/desktop/software-installation](../spec/desktop/software-installation/). They remain draft until the new-instance scenarios have been validated. No automated device scenarios are added by this change.
-
-LightOS resets the Arch pacman keyring on first boot. This image enables a service that restores the Omarchy signing key after that setup finishes.
-
-The desktop setup service grants the instance user access to the mapped GPU. The console service waits for VT Manager to activate the mapped terminal, then automatically logs in the ordinary instance user and starts the desktop. It starts seatd in that controlling-terminal session with VT release/acquire handling enabled; a detached seatd cannot register those signals without `CAP_SYS_TTY_CONFIG`, which LightOS deliberately removes. Its preload guard permits terminal mode changes only on the VT mapped by LightOS at `/dev/tty0` and `/dev/tty7`, refuses a new client while another VT is active, and rejects VT allocation, activation, and switch locking. VT Manager retains ownership of switching. Switching away must release DRM master and input devices; switching back must restore the same physical desktop without another login. Validate both directions alongside a connected remote desktop before accepting a release.
-
-Physical automatic login uses Arch's `runuser-l` PAM stack to establish the ordinary user's logind session on the real allocated terminal. It sets the address of that user's existing D-Bus bus before starting UWSM. Arch's `su-l` stack does not establish this session and cannot supply the required login environment.
-
-This image does not include the entire ISO application collection and does not run the ISO's disk installer, bootloader setup, or hardware configuration. Image build checks do not replace verification of physical display and remote desktop behavior on the target LightOS device.
+The confirmed update requirements are in `spec/desktop/system-update/`. A real isolated-root package transaction must show that official packages and scriptlets install cleanly, the EFI deploy/kernel hooks are absent and a genuine boot migration skips without modifying boot content. On the current instance, run the complete official update and check package versions, pending migrations, desktop services and personal-file preservation. For a newly built image, create an instance and run the same official update before publishing it as validated. Build-only or source checks are not new-instance acceptance.

@@ -20,6 +20,10 @@ jobs:
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
+      - name: Check container update scripts
+        run: |
+          bash -n container/lightos-omarchy-enable-updates
+          bash -n container/lightos-omarchy-container.install
       - name: Log in to GHCR
         run: echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
         env:
@@ -29,9 +33,9 @@ jobs:
           docker build --platform linux/amd64
           --label "org.opencontainers.image.revision=$GITHUB_SHA"
           -f container/Dockerfile
-          -t ghcr.io/ponzs/omarchy:lightos-core-4.0.4-r6
-          -t ghcr.io/ponzs/omarchy:lightos-core-4.0.4 .
+          -t ghcr.io/ponzs/omarchy:lightos-stable
+          -t ghcr.io/ponzs/omarchy:lightos-stable-${{ github.sha }} .
       - name: Publish image
         run: |
-          docker push ghcr.io/ponzs/omarchy:lightos-core-4.0.4-r6
-          docker push ghcr.io/ponzs/omarchy:lightos-core-4.0.4
+          docker push ghcr.io/ponzs/omarchy:lightos-stable-${{ github.sha }}
+          docker push ghcr.io/ponzs/omarchy:lightos-stable

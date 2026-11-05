@@ -1,0 +1,7 @@
+post_install() {
+  /usr/bin/lightos-omarchy-enable-updates
+}
+
+post_upgrade() {
+  post_install
+}

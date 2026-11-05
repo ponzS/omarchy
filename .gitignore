@@ -4,3 +4,8 @@ __pycache__/
 *.pyc
 
 .claude/
+
+# Local container package builds
+/container/*.pkg.tar.*
+/container/pkg/
+/container/src/
