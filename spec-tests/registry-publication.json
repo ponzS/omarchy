@@ -1,0 +1,15 @@
+{
+  "source_commit": "275a6775e9bde273f5270bb2bd373d4d76d35191",
+  "manifest_digest": "sha256:7feb60b5423e6cfc031f492b472de8d7b9cc787c1d1cbde7c759845dcf7270f9",
+  "anonymous_pull_verified": [
+    "ghcr.io/ponzs/omarchy:lightos-stable-275a6775e9bd",
+    "ghcr.io/ponzs/omarchy:lightos-stable",
+    "ghcr.io/ponzs/omarchy:lightos-core-4.0.4-r6",
+    "crpi-0ywu29v97kotr22u.cn-hangzhou.personal.cr.aliyuncs.com/lightos/omarchy:lightos-core-4.0.4-r6",
+    "crpi-0ywu29v97kotr22u.cn-hangzhou.personal.cr.aliyuncs.com/lightos/omarchy:lightos-stable-275a6775e9bd"
+  ],
+  "docker_hub_updated": false,
+  "docker_hub_reason": "No existing Docker Hub publishing credentials; use the default Aliyun source or GHCR.",
+  "existing_instance_update_exit": 0,
+  "fresh_booted_instance_update_exit": 0
+}

@@ -28,7 +28,11 @@ docker build --platform linux/amd64 \
   -f container/Dockerfile -t ghcr.io/ponzs/omarchy:lightos-stable .
 ```
 
-The workflow publishes `lightos-stable-<commit>` plus the mutable `lightos-stable` tag. Use the immutable tag for LightOS presets to avoid stale image caches. Publishing a tag does not replace existing instances. Synchronize verified releases to the Docker Hub / Aliyun mirrors used by the LightOS preset before changing those references.
+The workflow publishes `lightos-stable-<commit>` plus the mutable `lightos-stable` tag. Use the immutable tag for LightOS presets to avoid stale image caches. Publishing a tag does not replace existing instances.
+
+The validated release is `ghcr.io/ponzs/omarchy:lightos-stable-275a6775e9bd`, also mirrored at `crpi-0ywu29v97kotr22u.cn-hangzhou.personal.cr.aliyuncs.com/lightos/omarchy:lightos-stable-275a6775e9bd`. The existing `lightos-core-4.0.4-r6` preset alias on **Aliyun and GHCR** points to the same new image for compatibility with the installed LightOS management app; its inherited name does not pin the installed desktop version. All verified references have manifest digest `sha256:7feb60b5423e6cfc031f492b472de8d7b9cc787c1d1cbde7c759845dcf7270f9`.
+
+Docker Hub was not republished because its publishing credentials were unavailable. Until that mirror is synchronized, select the default Aliyun source or GHCR, not Docker Hub. An already cached old preset tag may need a fresh pull; the immutable release reference avoids that ambiguity. The publication receipt is `spec-tests/registry-publication.json`.
 
 ## Container desktop integration
 
