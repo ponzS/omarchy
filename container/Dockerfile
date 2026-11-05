@@ -1,21 +1,15 @@
 FROM docker.io/library/archlinux:base AS build
 
-RUN pacman -Syu --noconfirm --needed base-devel git \
+RUN printf '%s\n' 'Server = https://stable-mirror.omarchy.org/$repo/os/$arch' > /etc/pacman.d/mirrorlist \
+  && pacman -Syyuu --noconfirm --needed base-devel git \
   && useradd -m builder \
-  && mkdir -p /work/source /work/pkg
+  && mkdir -p /work/pkg
 
 FROM build AS package
 
-COPY bin/ /work/source/bin/
-COPY default/libalpm/hooks/ /work/source/default/libalpm/hooks/
-COPY install/ /work/source/install/
-COPY migrations/ /work/source/migrations/
-COPY shell/ /work/source/shell/
-COPY themes/ /work/source/themes/
-COPY version /work/source/version
-COPY container/PKGBUILD /work/pkg/PKGBUILD
+COPY container/PKGBUILD container/pacman-container.conf container/lightos-omarchy-enable-updates container/lightos-omarchy-container.install /work/pkg/
 RUN chown -R builder:builder /work \
-  && su builder -s /bin/bash -c 'cd /work/pkg && OMARCHY_SRC=/work/source makepkg --nodeps --noconfirm --clean'
+  && su builder -s /bin/bash -c 'cd /work/pkg && makepkg --nodeps --noconfirm --clean'
 
 FROM build AS seatd-guard
 
@@ -23,28 +17,22 @@ COPY container/lightos-seatd-vt-guard.c /work/lightos-seatd-vt-guard.c
 RUN cc -shared -fPIC -O2 -Wall -Wextra -Werror \
   -Wl,-z,relro,-z,now -o /work/lightos-seatd-vt-guard.so /work/lightos-seatd-vt-guard.c
 
-FROM build AS chrome
-
-# Review and pin the AUR recipe; makepkg verifies Google's binary checksums.
-ARG GOOGLE_CHROME_AUR_COMMIT=22f911574697bc9a89160773f0f6c7828ab3d06d
-RUN git init /work/google-chrome \
-  && git -C /work/google-chrome remote add origin https://aur.archlinux.org/google-chrome.git \
-  && git -C /work/google-chrome fetch --depth=1 origin "$GOOGLE_CHROME_AUR_COMMIT" \
-  && git -C /work/google-chrome checkout --detach FETCH_HEAD \
-  && chown -R builder:builder /work/google-chrome \
-  && su builder -s /bin/bash -c 'cd /work/google-chrome && makepkg --nodeps --noconfirm --clean'
-
 FROM docker.io/library/archlinux:base
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 LABEL org.opencontainers.image.source="https://github.com/ponzS/omarchy" \
   org.opencontainers.image.title="Omarchy for LightOS" \
-  org.opencontainers.image.version="4.0.4" \
-  org.opencontainers.image.description="Omarchy desktop with Chrome and package installation tools for LightOS"
+  org.opencontainers.image.description="Official stable Omarchy with independent LightOS container integration"
 
-COPY --from=package /work/pkg/omarchy-4.0.4-3-x86_64.pkg.tar.zst /tmp/omarchy.pkg.tar.zst
-COPY --from=chrome /work/google-chrome/google-chrome-*.pkg.tar.zst /tmp/chrome/
+COPY --from=package /work/pkg/lightos-omarchy-container-*.pkg.tar.zst /tmp/
+COPY container/pacman-container.conf /etc/pacman.d/lightos-omarchy.conf
+COPY container/lightos-omarchy-enable-updates /tmp/lightos-omarchy-enable-updates
+COPY container/desktop.packages /tmp/desktop.packages
 
 RUN set -eu; \
+  printf '%s\n' 'Server = https://stable-mirror.omarchy.org/$repo/os/$arch' > /etc/pacman.d/mirrorlist; \
+  pacman -Syyuu --noconfirm --needed python; \
+  bash /tmp/lightos-omarchy-enable-updates; \
   sed -i -e 's@usr/share/locale/\*@usr/share/locale/* !usr/share/locale/zh*/*@' \
     -e 's@usr/share/X11/locale/\*@usr/share/X11/locale/* !usr/share/X11/locale/zh*/*@' \
     -e 's@usr/share/i18n/\*@usr/share/i18n/* !usr/share/i18n/locales/zh_*@' /etc/pacman.conf; \
@@ -57,24 +45,19 @@ RUN set -eu; \
   pacman-key --add /tmp/omarchy-signing-key.asc; \
   pacman-key --lsign-key 40DFB630FF42BCFFB047046CF0134EE680CAC571; \
   printf '\n%s\n%s\n' '[omarchy]' 'Server = https://pkgs.omarchy.org/stable/$arch' >> /etc/pacman.conf; \
-  pacman -Syyuu --noconfirm --needed \
-    omarchy-keyring omarchy-settings \
-    systemd systemd-sysvcompat dbus sudo shadow openssh seatd \
-    hyprland quickshell uwsm sddm xdg-desktop-portal-hyprland \
-    wireplumber pipewire gnome-keyring gum jq git perl fakeroot pacman-contrib \
-    ttf-jetbrains-mono-nerd-basic foot fastfetch \
-    pipewire-pulse xdg-desktop-portal-gtk; \
-  pacman -U --noconfirm /tmp/chrome/*.pkg.tar.zst /tmp/omarchy.pkg.tar.zst; \
-  pacman -S --noconfirm glibc; \
+  pacman -Syyuu --noconfirm --needed omarchy-keyring python; \
+  mapfile -t dependencies < <(grep -Ev '^[[:space:]]*(#|$)' /tmp/desktop.packages); \
+  env OMARCHY_UPDATE_PACMAN=1 pacman -S --noconfirm --needed "${dependencies[@]}"; \
+  pacman -U --noconfirm /tmp/lightos-omarchy-container-*.pkg.tar.zst; \
+  env OMARCHY_UPDATE_PACMAN=1 pacman -S --noconfirm glibc; \
   sed -i -e '/^#en_US\.UTF-8[[:space:]]/s/^#//' \
     -e '/^#zh_CN\.UTF-8[[:space:]]/s/^#//' /etc/locale.gen; \
   locale-gen; \
   locale -a | grep -Fxq zh_CN.utf8; \
   fc-cache -f; \
-  sed -i '/^\[options\]/a IgnorePkg = omarchy' /etc/pacman.conf; \
   systemctl enable systemd-resolved.service; \
   install -Dm644 /usr/share/omarchy/config/chromium-flags.conf /etc/skel/.config/chrome-flags.conf; \
-  rm -rf /tmp/chrome /tmp/omarchy.pkg.tar.zst /tmp/omarchy-signing-key.asc; \
+  rm -f /tmp/*.pkg.tar.zst /tmp/omarchy-signing-key.asc /tmp/lightos-omarchy-enable-updates /tmp/desktop.packages; \
   pacman -Scc --noconfirm
 
 COPY --from=seatd-guard /work/lightos-seatd-vt-guard.so /usr/local/lib/lightos-seatd-vt-guard.so
@@ -90,5 +73,13 @@ RUN chmod 0755 /usr/local/bin/lightos-omarchy-device-setup /usr/local/bin/lighto
   && systemctl enable lightos-omarchy-keyring.service lightos-omarchy-device-setup.service lightos-omarchy-console.service
 
 COPY container/mimeapps.list /etc/skel/.config/mimeapps.list
+
+# The settings scriptlet needs a private /run/lock even in an unbooted OCI
+# build. Certify its grant cleanup after all packages landed; do not publish
+# an image with the settings transition blocker left behind.
+RUN install -d -m 0755 /run/lock \
+  && env OMARCHY_UPDATE_PACMAN=1 pacman -S --noconfirm omarchy-settings \
+  && test ! -e /run/omarchy-sudo-passwordless-package-removing \
+  && pacman -Scc --noconfirm
 
 CMD ["/sbin/init"]

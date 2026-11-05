@@ -2,3 +2,8 @@
 # Python bytecode (orchestrator)
 __pycache__/
 *.pyc
+
+# Local container package builds
+/container/*.pkg.tar.*
+/container/pkg/
+/container/src/
