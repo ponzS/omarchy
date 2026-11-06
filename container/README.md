@@ -30,9 +30,15 @@ docker build --platform linux/amd64 \
 
 The workflow publishes `lightos-stable-<commit>` plus the mutable `lightos-stable` tag. Use the immutable tag for LightOS presets to avoid stale image caches. Publishing a tag does not replace existing instances.
 
-The validated release is `ghcr.io/ponzs/omarchy:lightos-stable-275a6775e9bd`, also mirrored at `crpi-0ywu29v97kotr22u.cn-hangzhou.personal.cr.aliyuncs.com/lightos/omarchy:lightos-stable-275a6775e9bd`. The existing `lightos-core-4.0.4-r6` preset alias on **Aliyun and GHCR** points to the same new image for compatibility with the installed LightOS management app; its inherited name does not pin the installed desktop version. All verified references have manifest digest `sha256:7feb60b5423e6cfc031f492b472de8d7b9cc787c1d1cbde7c759845dcf7270f9`.
+The validated release is available from all three registries:
 
-Docker Hub was not republished because its publishing credentials were unavailable. Until that mirror is synchronized, select the default Aliyun source or GHCR, not Docker Hub. An already cached old preset tag may need a fresh pull; the immutable release reference avoids that ambiguity. The publication receipt is `spec-tests/registry-publication.json`.
+- GHCR: `ghcr.io/ponzs/omarchy:lightos-stable-275a6775e9bd`
+- Aliyun: `crpi-0ywu29v97kotr22u.cn-hangzhou.personal.cr.aliyuncs.com/lightos/omarchy:lightos-stable-275a6775e9bd`
+- Docker Hub: `docker.io/ponzs/omarchy:lightos-stable-275a6775e9bd`
+
+The `lightos-stable` tag and existing `lightos-core-4.0.4-r6` preset alias on **Aliyun, GHCR and Docker Hub** point to the same new image for compatibility with the installed LightOS management app; the inherited alias name does not pin the installed desktop version. All nine references were checked anonymously and have manifest digest `sha256:7feb60b5423e6cfc031f492b472de8d7b9cc787c1d1cbde7c759845dcf7270f9`. Docker Hub's image configuration and every layer blob were also checked for anonymous access.
+
+An already cached old preset tag may need a fresh pull; the immutable release reference avoids that ambiguity. The publication receipt is `spec-tests/registry-publication.json`.
 
 ## Container desktop integration
 

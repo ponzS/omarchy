@@ -6,10 +6,15 @@
     "ghcr.io/ponzs/omarchy:lightos-stable",
     "ghcr.io/ponzs/omarchy:lightos-core-4.0.4-r6",
     "crpi-0ywu29v97kotr22u.cn-hangzhou.personal.cr.aliyuncs.com/lightos/omarchy:lightos-core-4.0.4-r6",
-    "crpi-0ywu29v97kotr22u.cn-hangzhou.personal.cr.aliyuncs.com/lightos/omarchy:lightos-stable-275a6775e9bd"
+    "crpi-0ywu29v97kotr22u.cn-hangzhou.personal.cr.aliyuncs.com/lightos/omarchy:lightos-stable-275a6775e9bd",
+    "crpi-0ywu29v97kotr22u.cn-hangzhou.personal.cr.aliyuncs.com/lightos/omarchy:lightos-stable",
+    "docker.io/ponzs/omarchy:lightos-stable-275a6775e9bd",
+    "docker.io/ponzs/omarchy:lightos-stable",
+    "docker.io/ponzs/omarchy:lightos-core-4.0.4-r6"
   ],
-  "docker_hub_updated": false,
-  "docker_hub_reason": "No existing Docker Hub publishing credentials; use the default Aliyun source or GHCR.",
+  "docker_hub_updated": true,
+  "docker_hub_verified_at": "2026-11-06T10:33:40+08:00",
+  "docker_hub_verification": "Anonymous GET of all three tag manifests and image config; anonymous HEAD and size checks for all 20 config/layer blobs. Manifest and config digests verified; linux/amd64 confirmed.",
   "existing_instance_update_exit": 0,
   "fresh_booted_instance_update_exit": 0
 }
