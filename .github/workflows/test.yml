@@ -9,7 +9,7 @@ name: Tests
 on:
   pull_request:
   push:
-    branches: [quattro]
+    branches: [master]
 
 permissions:
   contents: read

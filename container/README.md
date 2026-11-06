@@ -20,6 +20,19 @@ Build the small integration package, enable its extraction policy before upgradi
 
 Existing installations should complete `omarchy update` so all applicable per-user migrations run. New users receive current migration markers from the official packages, so the image explicitly installs current desktop runtime additions such as OWE, titlebars and input methods.
 
+## Source maintenance
+
+LightOS container integration is maintained on [`master`](https://github.com/ponzS/omarchy/tree/master). The upstream desktop tree is rebased onto the official [`omacom/omarchy` `quattro` branch](https://github.com/omacom/omarchy/tree/quattro); no LightOS overrides of the official desktop commands are kept. The 2026-11-06 rebase uses upstream commit `d5b32d24d`.
+
+```bash
+git remote add upstream https://github.com/omacom/omarchy.git # once per checkout
+git fetch upstream quattro
+git switch master
+git rebase upstream/quattro
+```
+
+The source tree follows upstream development, while the Dockerfile still installs signed official **stable packages**. Rebasing source does not update existing instances or certify a newly built image. The original commit for the already validated image remains available under the source tag [`lightos-stable-275a6775e9bd`](https://github.com/ponzS/omarchy/tree/lightos-stable-275a6775e9bd); its publication receipt and update results below describe that historical build, not a new image from the rebased branch.
+
 ## Build and publish
 
 ```bash
@@ -28,7 +41,7 @@ docker build --platform linux/amd64 \
   -f container/Dockerfile -t ghcr.io/ponzs/omarchy:lightos-stable .
 ```
 
-The workflow publishes `lightos-stable-<commit>` plus the mutable `lightos-stable` tag. Use the immutable tag for LightOS presets to avoid stale image caches. Publishing a tag does not replace existing instances.
+The workflow runs on `master` pushes or manual dispatch and publishes `lightos-stable-<commit>` plus the mutable `lightos-stable` tag. Use the immutable tag for LightOS presets to avoid stale image caches. Publishing a tag does not replace existing instances.
 
 The validated release is available from all three registries:
 

@@ -3,7 +3,7 @@ name: Publish LightOS OCI image
 on:
   push:
     branches:
-      - lightos-oci-v4.0.4
+      - master
   workflow_dispatch:
 
 permissions:
@@ -11,7 +11,7 @@ permissions:
   packages: write
 
 concurrency:
-  group: lightos-oci-v4.0.4
+  group: lightos-oci-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
